@@ -30,7 +30,7 @@
                     </label>
                     <input type="text" id="author" name="author"
                         class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder:text-slate-400"
-                        placeholder="Vaše meno alebo pseudonym" value="{{ auth()->user()->name }}">
+                        placeholder="Vaše meno alebo pseudonym" value="{{ auth()->user()?->name }}">
                 </div>
 
                 <div>
