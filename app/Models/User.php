@@ -12,17 +12,29 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'phone', 'avatar',
-        'role', 'is_active', 'email_verified_at', 'two_factor_enabled'
+        'role', 'is_active', 'email_verified_at', 'two_factor_enabled',
+        'ai_api_key', 'ai_model', 'ai_enabled'
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'ai_api_key'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
         'two_factor_enabled' => 'boolean',
+        'ai_enabled' => 'boolean',
         'password' => 'hashed',
     ];
+
+    public function getAiApiKey(): string
+    {
+        return $this->ai_api_key ?: config('services.openai.api_key');
+    }
+
+    public function hasAiApiKey(): bool
+    {
+        return !empty($this->ai_api_key) || !empty(config('services.openai.api_key'));
+    }
 
     public function books()
     {

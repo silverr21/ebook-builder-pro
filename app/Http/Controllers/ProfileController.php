@@ -81,6 +81,28 @@ class ProfileController extends Controller
         return back()->with('success', 'Avatar bol odstránený.');
     }
 
+    public function updateAiSettings(Request $request): RedirectResponse
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'ai_api_key' => ['nullable', 'string', 'max:255'],
+            'ai_model' => ['nullable', 'string', 'in:gpt-4-turbo,gpt-4o,gpt-4o-mini,gpt-3.5-turbo'],
+            'ai_enabled' => ['boolean'],
+        ]);
+
+        // Only update API key if a new one was provided (not masked)
+        if ($request->filled('ai_api_key') && !str_starts_with($request->ai_api_key, '••••')) {
+            $user->ai_api_key = $validated['ai_api_key'];
+        }
+
+        $user->ai_model = $validated['ai_model'] ?? $user->ai_model;
+        $user->ai_enabled = $request->boolean('ai_enabled', true);
+        $user->save();
+
+        return back()->with('success', 'AI nastavenia boli uložené!');
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([

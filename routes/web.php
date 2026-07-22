@@ -60,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'updateInfo'])->name('profile.update');
     Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::put('/profile/ai', [\App\Http\Controllers\ProfileController::class, 'updateAiSettings'])->name('profile.ai.settings');
     Route::post('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::delete('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
     Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');

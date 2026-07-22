@@ -32,6 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/generate-seo/{book}', [AIController::class, 'generateSEO']);
         Route::post('/generate-faq', [AIController::class, 'generateFAQ']);
         Route::post('/generate-glossary', [AIController::class, 'generateGlossary']);
+        Route::post('/generate-summary', [AIController::class, 'generateSummary']);
+        Route::post('/generate-entire-book/{book}', [AIController::class, 'generateEntireBook']);
     });
 
     // Chapters

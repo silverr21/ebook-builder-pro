@@ -15,7 +15,12 @@ class AIController extends Controller
     public function __construct(
         protected AIWriterService $aiWriter,
         protected BookService $bookService,
-    ) {}
+    ) {
+        // Use authenticated user's API key for all AI operations
+        if (auth()->user()) {
+            $this->aiWriter->setUser(auth()->user());
+        }
+    }
 
     public function generateTitle(Request $request): JsonResponse
     {
@@ -166,6 +171,21 @@ class AIController extends Controller
         }
     }
 
+    public function generateSummary(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => 'required|string',
+            'sentence_count' => 'integer|min:1|max:20',
+        ]);
+
+        try {
+            $summary = $this->aiWriter->generateSummary($validated['text'], $validated['sentence_count'] ?? 5);
+            return response()->json(['summary' => $summary]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
     public function generateGlossary(Request $request): JsonResponse
     {
         $validated = $request->validate(['text' => 'required|string']);
@@ -173,6 +193,52 @@ class AIController extends Controller
         try {
             $glossary = $this->aiWriter->generateGlossary($validated['text']);
             return response()->json($glossary);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function generateEntireBook(Request $request, Book $book): JsonResponse
+    {
+        $this->authorize('update', $book);
+
+        $validated = $request->validate([
+            'topic' => 'required|string',
+            'genre' => 'required|string|max:50',
+            'style' => 'required|string|in:formal,casual,academic,poetic,technical',
+            'chapters' => 'integer|min:1|max:20',
+        ]);
+
+        try {
+
+            $chapters = $this->aiWriter->generateEntireBook(
+                $book->title,
+                $validated['topic'],
+                $validated['genre'],
+                $validated['style'],
+                $validated['chapters'] ?? 5
+            );
+
+            $createdChapters = [];
+            foreach ($chapters as $chapterData) {
+                $chapter = $this->bookService->createChapter($book, [
+                    'title' => $chapterData['title'] ?? 'Kapitola',
+                    'description' => $validated['topic'],
+                ]);
+
+                $this->bookService->createSection($chapter, [
+                    'title' => null,
+                    'content' => $chapterData['content'] ?? '',
+                ]);
+
+                $createdChapters[] = $chapter->load('sections');
+            }
+
+            return response()->json([
+                'message' => 'Book generated successfully',
+                'chapters' => $createdChapters,
+                'count' => count($createdChapters),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }

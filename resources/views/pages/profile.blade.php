@@ -97,12 +97,17 @@
                                 :class="activeTab === 'info' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
                             📝 Osobné údaje
                             <div x-show="activeTab === 'info'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-                        </button>
-                        <button @click="activeTab = 'password'" 
-                                class="flex-1 px-6 py-4 text-sm font-medium transition relative"
-                                :class="activeTab === 'password' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
+                        </button>                <button @click="activeTab = 'password'" 
+                        class="flex-1 px-6 py-4 text-sm font-medium transition relative"
+                        :class="activeTab === 'password' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
                             🔒 Zmeniť heslo
                             <div x-show="activeTab === 'password'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+                        </button>
+                        <button @click="activeTab = 'ai'" 
+                                class="flex-1 px-6 py-4 text-sm font-medium transition relative"
+                                :class="activeTab === 'ai' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
+                            🤖 AI Nastavenia
+                            <div x-show="activeTab === 'ai'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
                         </button>
                     </div>
 
@@ -176,6 +181,70 @@
                             <button type="submit" 
                                     class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg shadow-blue-500/25">
                                 🔑 Zmeniť heslo
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Tab: AI Settings -->
+                    <div x-show="activeTab === 'ai'" class="p-6" style="display: none;">
+                        <form action="{{ route('profile.ai.settings') }}" method="POST" class="space-y-6 max-w-lg">
+                            @csrf
+                            @method('PUT')
+
+                            <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-2xl">🤖</span>
+                                    <div>
+                                        <h4 class="font-semibold text-purple-900 dark:text-purple-100">AI Asistent</h4>
+                                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">Každý používateľ si môže nastaviť vlastný OpenAI API kľúč. Ak nie je nastavený, používa sa globálny kľúč zo systému.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">OpenAI API Kľúč</label>
+                                <div class="relative">
+                                    <input type="password" name="ai_api_key" value="{{ $user->ai_api_key ? '••••••••••••••••' : '' }}" 
+                                        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition font-mono text-sm"
+                                        placeholder="sk-...">
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                    🔑 Zadajte svoj OpenAI API kľúč. Kľúč získate na 
+                                    <a href="https://platform.openai.com/api-keys" target="_blank" class="text-purple-600 hover:text-purple-700 underline">platform.openai.com</a>
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">AI Model</label>
+                                    <select name="ai_model"
+                                        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
+                                        <option value="gpt-4-turbo" {{ $user->ai_model === 'gpt-4-turbo' ? 'selected' : '' }}>GPT-4 Turbo (výkonný)</option>
+                                        <option value="gpt-4o" {{ $user->ai_model === 'gpt-4o' ? 'selected' : '' }}>GPT-4o (najnovší)</option>
+                                        <option value="gpt-4o-mini" {{ $user->ai_model === 'gpt-4o-mini' ? 'selected' : '' }}>GPT-4o Mini (rýchly, lacný)</option>
+                                        <option value="gpt-3.5-turbo" {{ $user->ai_model === 'gpt-3.5-turbo' ? 'selected' : '' }}>GPT-3.5 Turbo (najlacnejší)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">&nbsp;</label>
+                                    <label class="flex items-center gap-3 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                                        <input type="checkbox" name="ai_enabled" value="1" {{ $user->ai_enabled ? 'checked' : '' }}
+                                            class="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500">
+                                        <span class="text-sm text-slate-700 dark:text-slate-300">Povoliť AI funkcie</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                                <p class="text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                                    <span>💡</span>
+                                    <span>API kľúč je uložený bezpečne v databáze a je viditeľný len pre vás. Môžete ho kedykoľvek zmeniť alebo odobrať.</span>
+                                </p>
+                            </div>
+
+                            <button type="submit" 
+                                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-indigo-700 transition shadow-lg shadow-purple-500/25">
+                                💾 Uložiť AI nastavenia
                             </button>
                         </form>
                     </div>
