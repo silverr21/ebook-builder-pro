@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sk" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: true }" :class="{ 'dark': darkMode }">
+<html lang="sk" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', sidebarOpen: {{ ($focusMode ?? false) ? 'false' : 'true' }} }" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

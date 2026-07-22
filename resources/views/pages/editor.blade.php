@@ -53,13 +53,36 @@
             <button @click="openAiAssistant()" class="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition flex items-center gap-1.5 shadow-sm">
                 🤖 AI
             </button>
+            @if($focusMode ?? false)
+            <a href="{{ route('editor.show', $book) }}" class="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5">
+                ↩️ Bežný režim
+            </a>
+            @else
+            <a href="{{ route('editor.focus', $book) }}" class="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center gap-1.5">
+                🎯 Focus režim
+            </a>
+            @endif
         </div>
     </div>
 
     <!-- Main Editor Grid -->
-    <div class="flex-1 grid grid-cols-12 gap-0 overflow-hidden">
+    <div class="flex-1 grid grid-cols-12 gap-0 overflow-hidden relative">
+        <!-- Reopen handle - Left Panel -->
+        <button x-show="!leftPanelOpen" @click="leftPanelOpen = true"
+                class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-l-0 rounded-r-lg p-1.5 text-slate-400 hover:text-blue-600 shadow-sm transition"
+                title="Zobraziť kapitoly" style="display: none;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+        </button>
+
+        <!-- Reopen handle - Right Panel -->
+        <button x-show="!rightPanelOpen" @click="rightPanelOpen = true"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 border-r-0 rounded-l-lg p-1.5 text-slate-400 hover:text-purple-600 shadow-sm transition"
+                title="Zobraziť AI nástroje" style="display: none;">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+        </button>
+
         <!-- Left Panel - Chapters -->
-        <div class="col-span-3 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+        <div x-show="leftPanelOpen" :class="leftPanelOpen ? 'col-span-3' : ''" class="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
             <!-- Chapters Header -->
             <div class="p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                 <div class="flex items-center justify-between mb-2">
@@ -67,9 +90,14 @@
                         <span>📖</span> Kapitoly
                         <span class="text-xs font-normal text-slate-400">({{ $book->chapters->count() }})</span>
                     </h3>
+                    <div class="flex items-center gap-1">
                     <button @click="showNewChapterModal = true" class="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition" title="Nová kapitola">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
                     </button>
+                    <button @click="leftPanelOpen = false" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Zbaliť panel">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+                    </button>
+                    </div>
                 </div>
                 <button @click="aiGenerateChapter()" class="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium rounded-lg hover:from-purple-600 hover:to-pink-600 transition shadow-sm">
                     🤖 Generovať kapitolu
@@ -112,7 +140,7 @@
         </div>
 
         <!-- Center Panel - Editor Area -->
-        <div class="col-span-6 flex flex-col overflow-hidden bg-white dark:bg-slate-800">
+        <div :class="centerSpanClass()" class="flex flex-col overflow-hidden bg-white dark:bg-slate-800">
             <!-- Section Tabs (within selected chapter) -->
             <div x-show="selectedChapter > 0" class="border-b border-slate-200 dark:border-slate-700">
                 <div class="flex items-center overflow-x-auto scrollbar-hide gap-0.5 px-2">
@@ -210,7 +238,7 @@
         </div>
 
         <!-- Right Panel - AI Tools & Stats -->
-        <div class="col-span-3 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+        <div x-ref="aiPanel" x-show="rightPanelOpen" :class="rightPanelOpen ? 'col-span-3' : ''" class="bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
             <!-- AI Loading Overlay -->
             <div x-show="showAiLoading" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[9998]" style="display: none;">
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center">
@@ -247,7 +275,12 @@
                     <h4 class="font-semibold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>🤖</span> AI Nástroje
                     </h4>
-                    <span class="text-xs text-slate-400">v2.0</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">v2.0</span>
+                        <button @click="rightPanelOpen = false" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Zbaliť panel">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="space-y-1.5">
@@ -380,6 +413,15 @@ function editor() {
 
         isSaving: false,
         autoSaveTimer: null,
+
+        focusMode: {{ ($focusMode ?? false) ? 'true' : 'false' }},
+        leftPanelOpen: {{ ($focusMode ?? false) ? 'false' : 'true' }},
+        rightPanelOpen: {{ ($focusMode ?? false) ? 'false' : 'true' }},
+
+        centerSpanClass() {
+            const open = (this.leftPanelOpen ? 1 : 0) + (this.rightPanelOpen ? 1 : 0);
+            return { 2: 'col-span-6', 1: 'col-span-9', 0: 'col-span-12' }[open];
+        },
 
         init() {
             quill = new Quill('#editor', {
@@ -741,8 +783,8 @@ function editor() {
         },
 
         openAiAssistant() {
-            // Scroll to AI panel
-            document.querySelector('.col-span-3')?.scrollIntoView({ behavior: 'smooth' });
+            this.rightPanelOpen = true;
+            this.$nextTick(() => this.$refs.aiPanel?.scrollIntoView({ behavior: 'smooth' }));
         },
 
         updateStats() {

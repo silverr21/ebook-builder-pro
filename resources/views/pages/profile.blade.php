@@ -185,9 +185,9 @@
                         </form>
                     </div>
 
-                    <!-- Tab: AI Settings -->
-                    <div x-show="activeTab === 'ai'" class="p-6" style="display: none;">
-                        <form action="{{ route('profile.ai.settings') }}" method="POST" class="space-y-6 max-w-lg">
+                    <!-- Tab: AI Settings (Extended) -->
+                    <div x-data="aiSettings()" x-init="init()" x-show="activeTab === 'ai'" class="p-6" style="display: none;">
+                        <form action="{{ route('profile.ai.settings') }}" method="POST" class="space-y-6 max-w-2xl">
                             @csrf
                             @method('PUT')
 
@@ -195,50 +195,143 @@
                                 <div class="flex items-start gap-3">
                                     <span class="text-2xl">🤖</span>
                                     <div>
-                                        <h4 class="font-semibold text-purple-900 dark:text-purple-100">AI Asistent</h4>
-                                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">Každý používateľ si môže nastaviť vlastný OpenAI API kľúč. Ak nie je nastavený, používa sa globálny kľúč zo systému.</p>
+                                        <h4 class="font-semibold text-purple-900 dark:text-purple-100">AI Asistent — Rozšírené nastavenia</h4>
+                                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">Podpora OpenAI (GPT), Anthropic (Claude) a Google (Gemini). Každý používateľ si môže nastaviť vlastný API kľúč.</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">OpenAI API Kľúč</label>
-                                <div class="relative">
-                                    <input type="password" name="ai_api_key" value="{{ $user->ai_api_key ? '••••••••••••••••' : '' }}" 
-                                        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition font-mono text-sm"
-                                        placeholder="sk-...">
+                            <!-- AI Provider -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">AI Provider</label>
+                                    <select name="ai_provider" x-model="provider" @change="updateModels()"
+                                        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
+                                        <option value="openai" {{ $user->ai_provider === 'openai' ? 'selected' : '' }}>OpenAI (GPT-4, GPT-3.5)</option>
+                                        <option value="anthropic" {{ $user->ai_provider === 'anthropic' ? 'selected' : '' }}>Anthropic (Claude 3)</option>
+                                        <option value="gemini" {{ $user->ai_provider === 'gemini' ? 'selected' : '' }}>Google (Gemini)</option>
+                                    </select>
                                 </div>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                                    🔑 Zadajte svoj OpenAI API kľúč. Kľúč získate na 
-                                    <a href="https://platform.openai.com/api-keys" target="_blank" class="text-purple-600 hover:text-purple-700 underline">platform.openai.com</a>
-                                </p>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">AI Model</label>
                                     <select name="ai_model"
                                         class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
-                                        <option value="gpt-4-turbo" {{ $user->ai_model === 'gpt-4-turbo' ? 'selected' : '' }}>GPT-4 Turbo (výkonný)</option>
-                                        <option value="gpt-4o" {{ $user->ai_model === 'gpt-4o' ? 'selected' : '' }}>GPT-4o (najnovší)</option>
-                                        <option value="gpt-4o-mini" {{ $user->ai_model === 'gpt-4o-mini' ? 'selected' : '' }}>GPT-4o Mini (rýchly, lacný)</option>
-                                        <option value="gpt-3.5-turbo" {{ $user->ai_model === 'gpt-3.5-turbo' ? 'selected' : '' }}>GPT-3.5 Turbo (najlacnejší)</option>
+                                        <option x-show="provider === 'openai'" value="gpt-4-turbo" {{ $user->ai_model === 'gpt-4-turbo' ? 'selected' : '' }}>GPT-4 Turbo (výkonný)</option>
+                                        <option x-show="provider === 'openai'" value="gpt-4o" {{ $user->ai_model === 'gpt-4o' ? 'selected' : '' }}>GPT-4o (najnovší)</option>
+                                        <option x-show="provider === 'openai'" value="gpt-4o-mini" {{ $user->ai_model === 'gpt-4o-mini' ? 'selected' : '' }}>GPT-4o Mini (rýchly, lacný)</option>
+                                        <option x-show="provider === 'openai'" value="gpt-3.5-turbo" {{ $user->ai_model === 'gpt-3.5-turbo' ? 'selected' : '' }}>GPT-3.5 Turbo (najlacnejší)</option>
+                                        <option x-show="provider === 'anthropic'" value="claude-3-opus-20240229" {{ $user->ai_model === 'claude-3-opus-20240229' ? 'selected' : '' }}>Claude 3 Opus (najvýkonnejší)</option>
+                                        <option x-show="provider === 'anthropic'" value="claude-3-sonnet-20240229" {{ $user->ai_model === 'claude-3-sonnet-20240229' ? 'selected' : '' }}>Claude 3 Sonnet (vyvážený)</option>
+                                        <option x-show="provider === 'anthropic'" value="claude-3-haiku-20240307" {{ $user->ai_model === 'claude-3-haiku-20240307' ? 'selected' : '' }}>Claude 3 Haiku (rýchly)</option>
+                                        <option x-show="provider === 'anthropic'" value="claude-3-5-sonnet-20241022" {{ $user->ai_model === 'claude-3-5-sonnet-20241022' ? 'selected' : '' }}>Claude 3.5 Sonnet (najnovší)</option>
+                                        <option x-show="provider === 'gemini'" value="gemini-1.5-pro" {{ $user->ai_model === 'gemini-1.5-pro' ? 'selected' : '' }}>Gemini 1.5 Pro</option>
+                                        <option x-show="provider === 'gemini'" value="gemini-1.5-flash" {{ $user->ai_model === 'gemini-1.5-flash' ? 'selected' : '' }}>Gemini 1.5 Flash (rýchly)</option>
+                                        <option x-show="provider === 'gemini'" value="gemini-2.0-flash-exp" {{ $user->ai_model === 'gemini-2.0-flash-exp' ? 'selected' : '' }}>Gemini 2.0 Flash (experimentálny)</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <!-- API Key + Enable -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                        <span x-text="provider === 'openai' ? 'OpenAI' : (provider === 'anthropic' ? 'Anthropic Claude' : 'Google Gemini')"></span> API Kľúč
+                                    </label>
+                                    <div class="relative">
+                                        <input type="password" name="ai_api_key" value="{{ $user->ai_api_key ? '••••••••••••••••' : '' }}" 
+                                            class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition font-mono text-sm"
+                                            placeholder="sk-... alebo claude-...">
+                                    </div>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                        🔑 Získajte kľúč na 
+                                        <a x-show="provider === 'openai'" href="https://platform.openai.com/api-keys" target="_blank" class="text-purple-600 hover:text-purple-700 underline">platform.openai.com</a>
+                                        <a x-show="provider === 'anthropic'" href="https://console.anthropic.com/" target="_blank" class="text-purple-600 hover:text-purple-700 underline">console.anthropic.com</a>
+                                        <a x-show="provider === 'gemini'" href="https://aistudio.google.com/apikey" target="_blank" class="text-purple-600 hover:text-purple-700 underline">aistudio.google.com</a>
+                                    </p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">&nbsp;</label>
-                                    <label class="flex items-center gap-3 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                                    <label class="flex items-center gap-3 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition h-[42px]">
                                         <input type="checkbox" name="ai_enabled" value="1" {{ $user->ai_enabled ? 'checked' : '' }}
                                             class="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500">
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">Povoliť AI funkcie</span>
+                                        <span class="text-sm text-slate-700 dark:text-slate-300">Povoliť AI</span>
                                     </label>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Settings -->
+                            <div class="bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-medium text-slate-900 dark:text-white">🔧 Rozšírené nastavenia</h4>
+                                    <button type="button" @click="showAdvanced = !showAdvanced" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                                        <span x-text="showAdvanced ? 'Skryť' : 'Zobraziť'"></span>
+                                    </button>
+                                </div>
+
+                                <div x-show="showAdvanced" class="space-y-5">
+                                    <!-- Temperature & Max Tokens -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Teplota (kreativita): <span class="font-mono" x-text="temperature"></span></label>
+                                            <input type="range" name="ai_temperature" x-model="temperature" min="0" max="2" step="0.1"
+                                                class="w-full accent-purple-600">
+                                            <div class="flex justify-between text-xs text-slate-400">
+                                                <span>Presný (0)</span>
+                                                <span>Vyvážený (1)</span>
+                                                <span>Kreatívny (2)</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Max tokenov</label>
+                                            <select name="ai_max_tokens"
+                                                class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
+                                                <option value="500" {{ $user->ai_max_tokens === 500 ? 'selected' : '' }}>500 (krátke odpovede)</option>
+                                                <option value="1000" {{ $user->ai_max_tokens === 1000 ? 'selected' : '' }}>1 000 (štandard)</option>
+                                                <option value="2000" {{ $user->ai_max_tokens === 2000 ? 'selected' : '' }}>2 000 (dlhšie texty)</option>
+                                                <option value="4000" {{ $user->ai_max_tokens === 4000 ? 'selected' : '' }}>4 000 (dlhé kapitoly)</option>
+                                                <option value="8000" {{ $user->ai_max_tokens === 8000 ? 'selected' : '' }}>8 000 (veľmi dlhé)</option>
+                                                <option value="16000" {{ $user->ai_max_tokens === 16000 ? 'selected' : '' }}>16 000 (maximálne)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Timeout & Language -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Timeout (sekundy)</label>
+                                            <input type="number" name="ai_timeout" value="{{ $user->ai_timeout ?? 60 }}" min="10" max="300"
+                                                class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Jazyk výstupu</label>
+                                            <select name="ai_language"
+                                                class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition">
+                                                <option value="sk" {{ $user->ai_language === 'sk' ? 'selected' : '' }}>🇸🇰 Slovenčina</option>
+                                                <option value="cs" {{ $user->ai_language === 'cs' ? 'selected' : '' }}>🇨🇿 Čeština</option>
+                                                <option value="en" {{ $user->ai_language === 'en' ? 'selected' : '' }}>🇬🇧 English</option>
+                                                <option value="de" {{ $user->ai_language === 'de' ? 'selected' : '' }}>🇩🇪 Deutsch</option>
+                                                <option value="pl" {{ $user->ai_language === 'pl' ? 'selected' : '' }}>🇵🇱 Polski</option>
+                                                <option value="hu" {{ $user->ai_language === 'hu' ? 'selected' : '' }}>🇭🇺 Magyar</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom API URL -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                            Vlastná API URL <span class="text-xs text-slate-400">(voliteľné, pre self-hosted modely)</span>
+                                        </label>
+                                        <input type="url" name="ai_api_url" value="{{ $user->ai_api_url }}" 
+                                            class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition font-mono text-sm"
+                                            placeholder="https://api.openai.com/v1">
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                                 <p class="text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
                                     <span>💡</span>
-                                    <span>API kľúč je uložený bezpečne v databáze a je viditeľný len pre vás. Môžete ho kedykoľvek zmeniť alebo odobrať.</span>
+                                    <span>API kľúč je uložený bezpečne v databáze. Podporované provider-y: OpenAI (GPT-4, GPT-3.5), Anthropic (Claude 3), Google (Gemini). Pre OpenAI použite kľúč začínajúci na <code class="font-mono bg-blue-100 dark:bg-blue-800 px-1 rounded">sk-</code>, pre Anthropic <code class="font-mono bg-blue-100 dark:bg-blue-800 px-1 rounded">sk-ant-</code>.</span>
                                 </p>
                             </div>
 
@@ -309,4 +402,20 @@
         </div>
     </div>
 </div>
+
+<script>
+function aiSettings() {
+    return {
+        showAdvanced: false,
+        provider: '{{ $user->ai_provider ?? "openai" }}',
+        temperature: '{{ $user->ai_temperature ?? "0.7" }}',
+        
+        init() {},
+        
+        updateModels() {
+            // Provider change handled by x-show on options
+        }
+    }
+}
+</script>
 @endsection

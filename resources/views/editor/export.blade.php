@@ -3,7 +3,8 @@
 @section('title', $book->title . ' - Export')
 
 @section('content')
-<div class="p-6">
+<x-toast />
+<div class="p-6" x-data="exportManager()" x-init="init()">
     <div class="mb-8">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white">📤 Export knihy</h2>
         <p class="text-slate-600 dark:text-slate-400 mt-1">Exportujte svoju knihu do rôznych formátov</p>
@@ -112,26 +113,26 @@
         <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">⚙️ Možnosti exportu</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label class="flex items-center gap-3">
-                    <input type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" x-model="options.includeToc" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     <span class="text-sm text-slate-700 dark:text-slate-300">Zahrnúť obsah</span>
                 </label>
-                <label class="flex items-center gap-3 mt-2">
-                    <input type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                <label class="flex items-center gap-3 mt-2 cursor-pointer">
+                    <input type="checkbox" x-model="options.includeDesign" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     <span class="text-sm text-slate-700 dark:text-slate-300">Zahrnúť dizajn</span>
                 </label>
-                <label class="flex items-center gap-3 mt-2">
-                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                <label class="flex items-center gap-3 mt-2 cursor-pointer">
+                    <input type="checkbox" x-model="options.includeImages" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     <span class="text-sm text-slate-700 dark:text-slate-300">Zahrnúť obrázky</span>
                 </label>
             </div>
             <div>
-                <label class="flex items-center gap-3">
-                    <input type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" x-model="options.pageNumbers" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     <span class="text-sm text-slate-700 dark:text-slate-300">Čísla strán</span>
                 </label>
-                <label class="flex items-center gap-3 mt-2">
-                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                <label class="flex items-center gap-3 mt-2 cursor-pointer">
+                    <input type="checkbox" x-model="options.headerFooter" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     <span class="text-sm text-slate-700 dark:text-slate-300">Hlavička a päta</span>
                 </label>
             </div>
@@ -145,11 +146,72 @@
             <div>
                 <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Hromadný export</h3>
                 <p class="text-sm text-blue-700 dark:text-blue-300 mb-4">Exportujte do všetkých formátov naraz jedným kliknutím</p>
-                <button class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-md">
-                    📦 Exportovať všetko
-                </button>
+                <div class="flex items-center gap-3">
+                    <button @click="batchExport()" :disabled="batchLoading"
+                        class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-md flex items-center gap-2">
+                        <svg x-show="batchLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="batchLoading ? 'Exportujem...' : '📦 Exportovať všetko'"></span>
+                    </button>
+                    <div x-show="batchProgress" class="text-sm text-blue-700 dark:text-blue-300" x-text="batchProgress"></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function exportManager() {
+    return {
+        options: {
+            includeToc: true,
+            includeDesign: true,
+            includeImages: false,
+            pageNumbers: true,
+            headerFooter: false,
+        },
+        batchLoading: false,
+        batchProgress: '',
+
+        init() {},
+
+        async batchExport() {
+            this.batchLoading = true;
+            this.batchProgress = 'Prebieha export PDF...';
+            
+            const formats = ['pdf', 'epub', 'mobi', 'docx', 'markdown', 'html'];
+            const formatNames = { pdf: 'PDF', epub: 'EPUB', mobi: 'MOBI', docx: 'DOCX', markdown: 'Markdown', html: 'HTML' };
+            const params = new URLSearchParams(this.options).toString();
+
+            for (const fmt of formats) {
+                this.batchProgress = `Prebieha export ${formatNames[fmt]}...`;
+                try {
+                    const response = await fetch(`/api/export/${fmt}/{{ $book->id }}?${params}`, {
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    if (response.ok) {
+                        // Trigger download
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `{{ $book->slug }}.${fmt === 'markdown' ? 'md' : fmt}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                    }
+                } catch (e) {
+                    console.error(`Export ${fmt} failed:`, e);
+                }
+            }
+
+            this.batchProgress = '';
+            this.batchLoading = false;
+            showToast('Hromadný export dokončený! 📦✅', 'success');
+        }
+    }
+}
+</script>
 @endsection

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\Chapter;
 use App\Services\Book\BookService;

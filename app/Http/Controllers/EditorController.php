@@ -27,6 +27,13 @@ class EditorController extends Controller
         return view('pages.editor', compact('book'));
     }
 
+    public function focus(Book $book): View
+    {
+        $this->authorize('view', $book);
+        $book->load('chapters.sections', 'design');
+        return view('pages.editor', ['book' => $book, 'focusMode' => true]);
+    }
+
     public function design(Book $book): View
     {
         $this->authorize('update', $book);

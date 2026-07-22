@@ -3,11 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Services\Book\BookService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class BooksController extends Controller
 {
+    public function __construct(
+        protected BookService $bookService,
+    ) {}
+
     public function index(): View
     {
         $books = auth()->user()->books()
@@ -36,7 +42,8 @@ class BooksController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
-        $book = Book::create($validated);
+        $validated['slug'] = Str::slug($validated['title']) . '-' . time();
+        $book = $this->bookService->create($validated);
 
         return redirect()->route('editor.show', $book);
     }

@@ -87,8 +87,14 @@ class ProfileController extends Controller
 
         $validated = $request->validate([
             'ai_api_key' => ['nullable', 'string', 'max:255'],
-            'ai_model' => ['nullable', 'string', 'in:gpt-4-turbo,gpt-4o,gpt-4o-mini,gpt-3.5-turbo'],
+            'ai_model' => ['nullable', 'string', 'max:100'],
             'ai_enabled' => ['boolean'],
+            'ai_provider' => ['nullable', 'string', 'in:openai,anthropic,gemini'],
+            'ai_temperature' => ['nullable', 'numeric', 'min:0', 'max:2'],
+            'ai_max_tokens' => ['nullable', 'integer', 'min:100', 'max:16000'],
+            'ai_timeout' => ['nullable', 'integer', 'min:10', 'max:300'],
+            'ai_language' => ['nullable', 'string', 'in:sk,cs,en,de,pl,hu'],
+            'ai_api_url' => ['nullable', 'string', 'max:500'],
         ]);
 
         // Only update API key if a new one was provided (not masked)
@@ -98,6 +104,12 @@ class ProfileController extends Controller
 
         $user->ai_model = $validated['ai_model'] ?? $user->ai_model;
         $user->ai_enabled = $request->boolean('ai_enabled', true);
+        $user->ai_provider = $validated['ai_provider'] ?? $user->ai_provider;
+        $user->ai_temperature = $validated['ai_temperature'] ?? $user->ai_temperature;
+        $user->ai_max_tokens = $validated['ai_max_tokens'] ?? $user->ai_max_tokens;
+        $user->ai_timeout = $validated['ai_timeout'] ?? $user->ai_timeout;
+        $user->ai_language = $validated['ai_language'] ?? $user->ai_language;
+        $user->ai_api_url = $validated['ai_api_url'] ?? $user->ai_api_url;
         $user->save();
 
         return back()->with('success', 'AI nastavenia boli uložené!');

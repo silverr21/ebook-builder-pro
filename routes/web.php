@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Editor
     Route::get('/editor/new', [EditorController::class, 'create'])->name('editor.new');
     Route::get('/editor/{book}', [EditorController::class, 'show'])->name('editor.show');
+    Route::get('/editor/{book}/focus', [EditorController::class, 'focus'])->name('editor.focus');
     Route::get('/editor/{book}/design', [EditorController::class, 'design'])->name('editor.design');
     Route::get('/editor/{book}/preview', [EditorController::class, 'preview'])->name('editor.preview');
     Route::get('/editor/{book}/export', [EditorController::class, 'export'])->name('editor.export');

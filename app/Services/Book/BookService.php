@@ -12,7 +12,9 @@ class BookService
 {
     public function create(array $data): Book
     {
-        $data['slug'] = Str::slug($data['title']);
+        if (!isset($data['slug'])) {
+            $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
+        }
         return Book::create($data);
     }
 

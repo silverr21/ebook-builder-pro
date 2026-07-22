@@ -64,7 +64,7 @@
                     Vybratá šablóna: <strong class="text-slate-900 dark:text-white" x-text="selectedTemplate"></strong>
                 </span>
                 <div class="flex gap-2">
-                    <a :href="'{{ route('editor.new') }}'" 
+                    <a :href="'{{ route('editor.new') }}?template=' + selectedTemplate.toLowerCase()" 
                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg">
                         ✨ Použiť šablónu
                     </a>

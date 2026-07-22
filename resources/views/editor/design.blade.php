@@ -3,6 +3,7 @@
 @section('title', $book->title . ' - Design')
 
 @section('content')
+<x-toast />
 <div class="p-6" x-data="designManager()">
     <div class="mb-8">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white">🎨 Dizajn knihy</h2>
@@ -162,9 +163,10 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-4">
-        <button @click="saveDesign()"
-            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg">
-            💾 Uložiť dizajn
+        <button @click="saveDesign()" :disabled="saving"
+            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition shadow-lg flex items-center gap-2">
+            <svg x-show="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <span x-text="saving ? 'Ukladám...' : '💾 Uložiť dizajn'"></span>
         </button>
         <button @click="resetDesign()"
             class="px-6 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition">
@@ -177,6 +179,7 @@
 function designManager() {
     return {
         activeTemplate: '{{ $book->design?->template ?? 'modern' }}',
+        saving: false,
         settings: @json($book->design ? [
             'typography' => $book->design->typography,
             'colors' => $book->design->colors,
@@ -210,14 +213,17 @@ function designManager() {
                     this.settings.colors = data.design.colors;
                     this.settings.spacing = data.design.spacing;
                     this.settings.layout = data.design.layout;
-                    this.showToast('Šablóna aplikovaná!', 'success');
+                    showToast('Šablóna aplikovaná! ✅', 'success');
+                } else {
+                    showToast('Chyba pri aplikovaní šablóny', 'error');
                 }
             } catch (e) {
-                this.showToast('Chyba pri aplikovaní šablóny', 'error');
+                showToast('Chyba: ' + e.message, 'error');
             }
         },
 
         async saveDesign() {
+            this.saving = true;
             try {
                 const response = await fetch('/api/design/{{ $book->id }}', {
                     method: 'PUT',
@@ -233,24 +239,22 @@ function designManager() {
                     })
                 });
                 if (response.ok) {
-                    this.showToast('Dizajn bol uložený!', 'success');
+                    showToast('Dizajn bol uložený! ✅', 'success');
                 } else {
-                    this.showToast('Chyba pri ukladaní dizajnu', 'error');
+                    const err = await response.json();
+                    showToast('Chyba: ' + (err.message || 'Pri ukladaní nastala chyba'), 'error');
                 }
             } catch (e) {
-                this.showToast('Chyba: ' + e.message, 'error');
+                showToast('Chyba: ' + e.message, 'error');
+            } finally {
+                this.saving = false;
             }
         },
 
         resetDesign() {
             this.settings = @json(App\Models\Design::getDefaultDesign());
             this.activeTemplate = 'modern';
-            this.showToast('Dizajn bol obnovený na predvolený', 'info');
-        },
-
-        showToast(message, type = 'info') {
-            // Simple toast notification
-            alert(message);
+            showToast('Dizajn bol obnovený na predvolený ↩️', 'info');
         }
     }
 }
