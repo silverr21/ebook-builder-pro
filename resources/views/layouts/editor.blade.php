@@ -52,14 +52,26 @@
                 <a href="{{ route('editor.export', $book) }}" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition">
                     <span>📤</span>
                     <span x-show="sidebarOpen">Export</span>
-                </a>
+                </a>                            <a href="{{ route('editor.settings', $book) }}" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition">
+                                <span>⚙️</span>
+                                <span x-show="sidebarOpen">Nastavení</span>
+                            </a>
+                            @endisset
 
-                <a href="{{ route('editor.settings', $book) }}" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition">
-                    <span>⚙️</span>
-                    <span x-show="sidebarOpen">Nastavení</span>
-                </a>
-                @endisset
-            </nav>
+                            <div x-show="sidebarOpen" class="text-xs font-semibold text-slate-400 uppercase px-2 mt-6 mb-4">Systém</div>
+                            
+                            <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition">
+                                <span>👤</span>
+                                <span x-show="sidebarOpen">Profil</span>
+                            </a>
+                            
+                            @if(auth()->user()->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition">
+                                <span>🛡️</span>
+                                <span x-show="sidebarOpen">Admin</span>
+                            </a>
+                            @endif
+                        </nav>
 
             <div class="absolute bottom-4 left-4 right-4 space-y-2">
                 <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-slate-700 transition text-sm">

@@ -10,7 +10,8 @@ class Book extends Model
 {
     protected $fillable = [
         'user_id', 'title', 'description', 'slug', 'status',
-        'cover_image', 'author', 'tags', 'is_featured', 'published_at'
+        'cover_image', 'author', 'tags', 'is_featured', 'published_at',
+        'view_count'
     ];
 
     protected $casts = [

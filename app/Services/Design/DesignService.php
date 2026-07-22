@@ -150,10 +150,15 @@ class DesignService
     {
         $genre = $options['genre'] ?? 'fiction';
         $mood = $options['mood'] ?? 'professional';
+        $style = $options['style'] ?? 'modern';
         
-        return "Create a professional ebook cover for: '{$book->title}' by {$book->author}. " .
-               "Genre: {$genre}. Mood: {$mood}. Style: {$options['style'] ?? 'modern'}. " .
-               "Description: {$book->description}";
+        $title = $book->title;
+        $author = $book->author;
+        $description = $book->description;
+        
+        return "Create a professional ebook cover for: '{$title}' by {$author}. " .
+               "Genre: {$genre}. Mood: {$mood}. Style: {$style}. " .
+               "Description: {$description}";
     }
 
     protected function generateImage(string $prompt, array $options): string

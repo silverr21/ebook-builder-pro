@@ -26,7 +26,7 @@
 
             <div class="flex-1 overflow-y-auto">
                 @forelse($book->chapters as $chapter)
-                <div @click="selectChapter({{ $chapter->id }})" class="p-3 border-b border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition" :class="{ 'bg-blue-100 dark:bg-blue-900': selectedChapter === {{ $chapter->id }} }">
+                <div @click="selectChapter({{ $chapter->id }})" class="group p-3 border-b border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition" :class="{ 'bg-blue-100 dark:bg-blue-900': selectedChapter === {{ $chapter->id }} }">
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <h4 class="font-medium text-sm line-clamp-2">{{ $chapter->title }}</h4>
@@ -178,7 +178,11 @@ let quill;
 function editor() {
     return {
         selectedChapter: {{ $book->chapters->first()?->id ?? 0 }},
+        selectedSection: null,
         showNewChapterModal: false,
+        showAiLoading: false,
+        aiResult: null,
+        showAiResult: false,
         newChapterTitle: '',
         stats: { words: 0, characters: 0, paragraphs: 0, readingTime: 0 },
 
@@ -193,7 +197,10 @@ function editor() {
             });
 
             quill.on('text-change', () => this.updateStats());
-            this.loadContent();
+            
+            if (this.selectedChapter > 0) {
+                this.loadContent();
+            }
         },
 
         selectChapter(chapterId) {
@@ -201,29 +208,73 @@ function editor() {
             this.loadContent();
         },
 
-        loadContent() {
-            // Load chapter content
-            fetch(`/api/chapters/${this.selectedChapter}`)
-                .then(r => r.json())
-                .then(data => {
-                    quill.setContents(JSON.parse(data.content || '[]'));
-                    this.updateStats();
-                });
+        async loadContent() {
+            if (!this.selectedChapter || this.selectedChapter === 0) return;
+            try {
+                const response = await fetch(`/api/chapters/${this.selectedChapter}`);
+                const data = await response.json();
+                
+                // Get first section content or empty
+                const sections = data.sections || [];
+                this.selectedSection = sections.length > 0 ? sections[0].id : null;
+                
+                if (sections.length > 0 && sections[0].content) {
+                    try {
+                        quill.setContents(JSON.parse(sections[0].content));
+                    } catch (e) {
+                        // If content is plain HTML, set it as text
+                        quill.setText(sections[0].content);
+                    }
+                } else {
+                    quill.setText('');
+                }
+                this.updateStats();
+            } catch (e) {
+                console.error('Failed to load content:', e);
+            }
         },
 
-        saveContent() {
-            const content = JSON.stringify(quill.getContents());
-            fetch(`/api/chapters/${this.selectedChapter}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({ content })
-            })
-            .then(r => r.json())
-            .then(() => alert('Obsah uložen!'))
-            .catch(e => alert('Chyba: ' + e.message));
+        async saveContent() {
+            if (!this.selectedSection) {
+                // Create a new section for this chapter
+                try {
+                    const content = JSON.stringify(quill.getContents());
+                    const response = await fetch('/api/sections', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            chapter_id: this.selectedChapter,
+                            content: content
+                        })
+                    });
+                    const data = await response.json();
+                    this.selectedSection = data.id;
+                    this.showToast('Obsah uložen!', 'success');
+                } catch (e) {
+                    this.showToast('Chyba: ' + e.message, 'error');
+                }
+            } else {
+                // Update existing section
+                try {
+                    const content = JSON.stringify(quill.getContents());
+                    const response = await fetch(`/api/sections/${this.selectedSection}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ content })
+                    });
+                    if (response.ok) {
+                        this.showToast('Obsah uložen!', 'success');
+                    }
+                } catch (e) {
+                    this.showToast('Chyba: ' + e.message, 'error');
+                }
+            }
         },
 
         createChapter() {
@@ -251,37 +302,149 @@ function editor() {
             }
         },
 
+        async callAiApi(endpoint, body) {
+            this.showAiLoading = true;
+            try {
+                const response = await fetch(`/api/ai/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    this.showToast('Chyba AI: ' + data.error, 'error');
+                    return null;
+                }
+                
+                return data;
+            } catch (e) {
+                this.showToast('Chyba pripojenia: ' + e.message, 'error');
+                return null;
+            } finally {
+                this.showAiLoading = false;
+            }
+        },
+
         async aiExpand() {
             const text = quill.getText();
-            const response = await fetch('/api/ai/expand-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({ text })
+            if (!text.trim()) {
+                this.showToast('Najprv napíšte text na rozšírenie', 'warning');
+                return;
+            }
+            const data = await this.callAiApi('expand-text', { text, ratio: 1.5 });
+            if (data && data.expanded) {
+                this.showAiResult = true;
+                this.aiResult = data.expanded;
+                // Replace content
+                quill.setText(data.expanded);
+                this.showToast('Text bol rozšírený!', 'success');
+            }
+        },
+
+        async aiShorten() {
+            const text = quill.getText();
+            if (!text.trim()) {
+                this.showToast('Najprv napíšte text na skrátenie', 'warning');
+                return;
+            }
+            const data = await this.callAiApi('shorten-text', { text, ratio: 0.7 });
+            if (data && data.shortened) {
+                quill.setText(data.shortened);
+                this.showToast('Text bol skrátený!', 'success');
+            }
+        },
+
+        async aiRewrite() {
+            const text = quill.getText();
+            if (!text.trim()) {
+                this.showToast('Najprv napíšte text na prepísanie', 'warning');
+                return;
+            }
+            const style = prompt('Vyberte štýl (formal, casual, academic, poetic, technical):', 'formal');
+            if (!style) return;
+            const data = await this.callAiApi('rewrite-text', { text, style });
+            if (data && data.rewritten) {
+                quill.setText(data.rewritten);
+                this.showToast('Text bol prepísaný!', 'success');
+            }
+        },
+
+        async aiContinue() {
+            const text = quill.getText();
+            if (!text.trim()) {
+                this.showToast('Najprv napíšte text na pokračovanie', 'warning');
+                return;
+            }
+            const data = await this.callAiApi('continue-writing', { text, words: 500 });
+            if (data && data.continued) {
+                // Append to existing content using Quill API properly
+                const currentLength = quill.getLength();
+                quill.insertText(currentLength, '\n\n' + data.continued);
+                this.showToast('Text bol rozšírený!', 'success');
+            }
+        },
+
+        async aiCheckGrammar() {
+            const text = quill.getText();
+            if (!text.trim()) {
+                this.showToast('Najprv napíšte text na kontrolu', 'warning');
+                return;
+            }
+            const data = await this.callAiApi('check-grammar', { text });
+            if (data && data.issues) {
+                const issues = typeof data.issues === 'string' ? JSON.parse(data.issues) : data.issues;
+                if (Array.isArray(issues) && issues.length > 0) {
+                    let message = '🔍 Nájdené problémy:\n';
+                    issues.forEach((issue, i) => {
+                        message += `\n${i + 1}. ${issue.message || issue.description || JSON.stringify(issue)}`;
+                    });
+                    this.showToast(message, 'info');
+                } else {
+                    this.showToast('✅ Gramatika je v poriadku!', 'success');
+                }
+            }
+        },
+
+        async aiGenerateChapter() {
+            const chapterTitle = prompt('Zadajte tému kapitoly:');
+            if (!chapterTitle) return;
+            
+            const data = await this.callAiApi('generate-chapter/{{ $book->id }}', {
+                title: chapterTitle,
+                topic: chapterTitle,
+                word_count: 2000
             });
-            const data = await response.json();
-            quill.setContents(data.expanded);
+            
+            if (data && data.chapter) {
+                this.showToast('Kapitola bola vygenerovaná!', 'success');
+                location.reload();
+            }
         },
 
         updateStats() {
             const text = quill.getText();
-            const words = text.trim().split(/\s+/).length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
             this.stats.words = words;
             this.stats.characters = text.length;
-            this.stats.paragraphs = text.split('\n').length;
-            this.stats.readingTime = Math.ceil(words / 200);
+            this.stats.paragraphs = text.split('\n').filter(p => p.trim()).length;
+            this.stats.readingTime = Math.max(1, Math.ceil(words / 200));
         },
 
         undo() { quill.history.undo(); },
         redo() { quill.history.redo(); },
 
-        async aiShorten() { /* Similar to aiExpand */ },
-        async aiRewrite() { /* Similar to aiExpand */ },
-        async aiContinue() { /* Similar to aiExpand */ },
-        async aiCheckGrammar() { /* Similar to aiExpand */ },
-        async aiGenerateChapter() { /* Similar to aiExpand */ },
+        showToast(message, type = 'info') {
+            // Simple toast using alert for now - can be enhanced
+            if (type === 'info' || type === 'warning') {
+                alert(message);
+            } else {
+                alert(message);
+            }
+        }
     }
 }
 
